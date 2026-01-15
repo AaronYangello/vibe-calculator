@@ -2,11 +2,8 @@
 const API_URL = 'http://localhost:8000';
 
 // State
-let currentExpression = '';
-let currentNumber = '';
-let currentOperator = null;
-let firstNumber = null;
-let waitingForSecond = false;
+let displayExpression = ''; // The full expression shown to user (e.g., "1+2*3")
+let lastResult = null; // Store last calculation result
 
 // DOM Elements
 const expressionDisplay = document.getElementById('expression');
@@ -17,91 +14,191 @@ const statusMessage = document.getElementById('statusMessage');
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
     loadHistory();
+    updateDisplay();
 });
 
 // Number input
 function appendNumber(num) {
-    if (waitingForSecond && currentNumber === '') {
-        currentNumber = num;
-    } else {
-        currentNumber = currentNumber === '0' ? num : currentNumber + num;
+    // If starting fresh after a calculation, clear the display
+    if (lastResult !== null && displayExpression === lastResult.toString()) {
+        displayExpression = '';
+        lastResult = null;
     }
+
+    displayExpression += num;
     updateDisplay();
 }
 
 // Operator input
 function appendOperator(operator) {
+    // Special handling for square root (unary operation)
     if (operator === 'sqrt') {
-        // Square root is a unary operation
-        if (currentNumber) {
-            firstNumber = parseFloat(currentNumber);
-            currentOperator = operator;
-            currentExpression = `√${currentNumber}`;
-            calculate();
-        }
+        handleSquareRoot();
         return;
     }
 
-    if (currentNumber !== '') {
-        if (firstNumber !== null && currentOperator && !waitingForSecond) {
-            // Chain calculations
-            calculate();
-        } else {
-            firstNumber = parseFloat(currentNumber);
+    // Don't add operator if expression is empty or already ends with an operator
+    if (displayExpression === '') {
+        return;
+    }
+
+    const lastChar = displayExpression.slice(-1);
+    const operatorSymbols = ['+', '−', '×', '÷', '^'];
+
+    // If last character is already an operator, replace it
+    if (operatorSymbols.includes(lastChar)) {
+        displayExpression = displayExpression.slice(0, -1);
+    }
+
+    const symbol = getOperatorSymbol(operator);
+    displayExpression += symbol;
+    lastResult = null;
+    updateDisplay();
+}
+
+// Handle square root operation
+async function handleSquareRoot() {
+    const currentNumber = getCurrentNumber();
+    if (currentNumber === null || currentNumber === '') {
+        return;
+    }
+
+    try {
+        const result = await sendCalculation('sqrt', parseFloat(currentNumber), null);
+        displayExpression = result.toString();
+        lastResult = result;
+        updateDisplay();
+        await loadHistory();
+    } catch (error) {
+        showError(error.message);
+    }
+}
+
+// Get the current number being entered (after the last operator)
+function getCurrentNumber() {
+    const operatorSymbols = ['+', '−', '×', '÷', '^'];
+    let currentNum = '';
+
+    for (let i = displayExpression.length - 1; i >= 0; i--) {
+        const char = displayExpression[i];
+        if (operatorSymbols.includes(char)) {
+            break;
         }
-        currentOperator = operator;
-        currentExpression = `${currentNumber} ${getOperatorSymbol(operator)}`;
-        currentNumber = '';
-        waitingForSecond = true;
+        currentNum = char + currentNum;
+    }
+
+    return currentNum;
+}
+
+// Backspace - delete last character
+function backspace() {
+    if (displayExpression.length > 0) {
+        displayExpression = displayExpression.slice(0, -1);
         updateDisplay();
     }
 }
 
 // Clear display
 function clearDisplay() {
-    currentExpression = '';
-    currentNumber = '';
-    currentOperator = null;
-    firstNumber = null;
-    waitingForSecond = false;
-    resultDisplay.textContent = '0';
-    expressionDisplay.textContent = '0';
+    displayExpression = '';
+    lastResult = null;
+    updateDisplay();
 }
 
-// Calculate
-async function calculate() {
-    if (currentOperator === 'sqrt') {
-        // Handle square root
-        try {
-            const result = await sendCalculation('sqrt', firstNumber, null);
-            displayResult(result);
-            resetAfterCalculation(result);
-        } catch (error) {
-            showError(error.message);
+// Parse expression into tokens (numbers and operators)
+function parseExpression(expr) {
+    const tokens = [];
+    let currentNumber = '';
+
+    for (let i = 0; i < expr.length; i++) {
+        const char = expr[i];
+
+        if (char >= '0' && char <= '9' || char === '.') {
+            currentNumber += char;
+        } else if (char === '−' && currentNumber === '' && (i === 0 || ['+', '−', '×', '÷', '^'].includes(expr[i-1]))) {
+            // Handle negative numbers
+            currentNumber += '-';
+        } else if (['+', '−', '×', '÷', '^'].includes(char)) {
+            if (currentNumber !== '') {
+                tokens.push({ type: 'number', value: parseFloat(currentNumber) });
+                currentNumber = '';
+            }
+            tokens.push({ type: 'operator', value: char });
         }
+    }
+
+    if (currentNumber !== '') {
+        tokens.push({ type: 'number', value: parseFloat(currentNumber) });
+    }
+
+    return tokens;
+}
+
+// Convert display symbol to API operation name
+function symbolToOperation(symbol) {
+    const symbolMap = {
+        '+': 'add',
+        '−': 'subtract',
+        '×': 'multiply',
+        '÷': 'divide',
+        '^': 'power',
+        'mod': 'modulo'
+    };
+    return symbolMap[symbol] || symbol;
+}
+
+// Calculate the expression
+async function calculate() {
+    if (displayExpression === '' || displayExpression === '0') {
         return;
     }
 
-    if (firstNumber === null || currentOperator === null) {
+    // Check if expression ends with an operator
+    const lastChar = displayExpression.slice(-1);
+    if (['+', '−', '×', '÷', '^'].includes(lastChar)) {
+        showError('Expression cannot end with an operator');
         return;
     }
-
-    const secondNumber = parseFloat(currentNumber);
-    if (isNaN(secondNumber) && currentOperator !== 'sqrt') {
-        showError('Invalid number');
-        return;
-    }
-
-    currentExpression = `${firstNumber} ${getOperatorSymbol(currentOperator)} ${secondNumber}`;
-    updateDisplay();
 
     try {
-        const result = await sendCalculation(currentOperator, firstNumber, secondNumber);
-        displayResult(result);
-        resetAfterCalculation(result);
-        await loadHistory(); // Refresh history
+        const tokens = parseExpression(displayExpression);
+
+        if (tokens.length === 0) {
+            return;
+        }
+
+        // If there's only one number, just display it
+        if (tokens.length === 1 && tokens[0].type === 'number') {
+            lastResult = tokens[0].value;
+            displayExpression = formatNumber(lastResult);
+            updateDisplay();
+            return;
+        }
+
+        // Evaluate left-to-right
+        let result = tokens[0].value;
+
+        for (let i = 1; i < tokens.length; i += 2) {
+            if (i + 1 >= tokens.length) {
+                break; // Incomplete expression
+            }
+
+            const operator = tokens[i].value;
+            const nextNumber = tokens[i + 1].value;
+            const operation = symbolToOperation(operator);
+
+            // Send calculation to backend
+            result = await sendCalculation(operation, result, nextNumber);
+        }
+
+        lastResult = result;
+        displayExpression = formatNumber(result);
+        updateDisplay();
+        await loadHistory();
+
     } catch (error) {
         showError(error.message);
+        // Don't clear expression on error, let user fix it
     }
 }
 
@@ -112,7 +209,7 @@ async function sendCalculation(operation, num1, num2) {
         num1: num1
     };
 
-    if (num2 !== null) {
+    if (num2 !== null && num2 !== undefined) {
         requestBody.num2 = num2;
     }
 
@@ -133,27 +230,15 @@ async function sendCalculation(operation, num1, num2) {
     return data.result;
 }
 
-// Display result
-function displayResult(result) {
-    resultDisplay.textContent = formatNumber(result);
-}
-
-// Reset after calculation
-function resetAfterCalculation(result) {
-    firstNumber = result;
-    currentNumber = result.toString();
-    currentOperator = null;
-    waitingForSecond = false;
-}
-
 // Update display
 function updateDisplay() {
-    if (currentExpression) {
-        expressionDisplay.textContent = currentExpression + (currentNumber && !waitingForSecond ? ` ${currentNumber}` : '');
-    } else {
+    if (displayExpression === '') {
         expressionDisplay.textContent = '0';
+        resultDisplay.textContent = '0';
+    } else {
+        expressionDisplay.textContent = displayExpression;
+        resultDisplay.textContent = displayExpression;
     }
-    resultDisplay.textContent = currentNumber || '0';
 }
 
 // Load history
@@ -205,11 +290,8 @@ function formatHistoryExpression(item) {
 
 // Use history item
 function useHistoryItem(item) {
-    currentNumber = item.result.toString();
-    firstNumber = item.result;
-    currentExpression = '';
-    currentOperator = null;
-    waitingForSecond = false;
+    displayExpression = item.result.toString();
+    lastResult = item.result;
     updateDisplay();
 }
 
@@ -308,6 +390,9 @@ document.addEventListener('keydown', (event) => {
     } else if (key === 'Enter' || key === '=') {
         event.preventDefault();
         calculate();
+    } else if (key === 'Backspace') {
+        event.preventDefault();
+        backspace();
     } else if (key === 'Escape' || key === 'c' || key === 'C') {
         clearDisplay();
     }
