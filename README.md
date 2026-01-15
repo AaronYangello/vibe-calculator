@@ -6,9 +6,11 @@ A modern calculator application with a beautiful web interface and Python FastAP
 
 - ✨ **Modern, Beautiful UI**: Gradient design with smooth animations
 - 🧮 **Basic Operations**: Addition, subtraction, multiplication, division
-- 🔢 **Advanced Operations**: Power, square root, modulo
+- 🔢 **Advanced Operations**: Power, square root
+- 📝 **Expression Building**: Type full expressions (e.g., "1+1+1") before calculating
+- ⌫ **Backspace Support**: Delete last character or operator with backspace button/key
 - 📜 **History Tracking**: Automatically stores last 25 calculations
-- ⌨️ **Keyboard Support**: Full keyboard navigation
+- ⌨️ **Keyboard Support**: Full keyboard navigation including Backspace
 - 📱 **Responsive Design**: Works on desktop and mobile
 - ✅ **Test-Driven Development**: Comprehensive test suite with 35 tests
 
@@ -139,6 +141,7 @@ GET /health
 - **Numbers (0-9)**: Input numbers
 - **Operators (+, -, *, /)**: Mathematical operations
 - **Enter or =**: Calculate result
+- **Backspace**: Delete last character or operator
 - **Escape or C**: Clear calculator
 - **.**: Decimal point
 
@@ -150,6 +153,13 @@ Built with:
 - **Testing**: Pytest, httpx
 
 ## Features in Detail
+
+### Expression Building
+- Type complete expressions before calculating (e.g., "1+1+1", "5+3×2")
+- Expression remains visible until you press "=" or Enter
+- Left-to-right evaluation (e.g., "5+3×2" = (5+3)×2 = 16)
+- Edit expressions with backspace before calculating
+- Continue calculations from previous results
 
 ### History Management
 - Automatically stores successful calculations

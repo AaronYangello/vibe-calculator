@@ -25,7 +25,7 @@
                     <div class="buttons-grid">
                         <!-- Row 1 -->
                         <button class="btn btn-function" onclick="clearDisplay()">AC</button>
-                        <button class="btn btn-function" onclick="appendOperator('power')">x^y</button>
+                        <button class="btn btn-function" onclick="backspace()">⌫</button>
                         <button class="btn btn-function" onclick="appendOperator('sqrt')">√</button>
                         <button class="btn btn-operator" onclick="appendOperator('divide')">÷</button>
 
@@ -48,9 +48,9 @@
                         <button class="btn btn-operator" onclick="appendOperator('add')">+</button>
 
                         <!-- Row 5 -->
-                        <button class="btn btn-number" onclick="appendNumber('0')">0</button>
+                        <button class="btn btn-number btn-zero" onclick="appendNumber('0')">0</button>
                         <button class="btn btn-number" onclick="appendNumber('.')">.</button>
-                        <button class="btn btn-function" onclick="appendOperator('modulo')">mod</button>
+                        <button class="btn btn-function" onclick="appendOperator('power')">x^y</button>
                         <button class="btn btn-equals" onclick="calculate()">=</button>
                     </div>
                 </div>
