@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vibe Calculator</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🧮 Vibe Calculator</h1>
+            <p class="subtitle">A modern calculator with history tracking</p>
+        </header>
+
+        <div class="main-content">
+            <!-- Calculator Section -->
+            <div class="calculator-section">
+                <div class="calculator-card">
+                    <div class="display-container">
+                        <div class="expression" id="expression">0</div>
+                        <div class="result" id="result">0</div>
+                    </div>
+
+                    <div class="buttons-grid">
+                        <!-- Row 1 -->
+                        <button class="btn btn-function" onclick="clearDisplay()">AC</button>
+                        <button class="btn btn-function" onclick="appendOperator('power')">x^y</button>
+                        <button class="btn btn-function" onclick="appendOperator('sqrt')">√</button>
+                        <button class="btn btn-operator" onclick="appendOperator('divide')">÷</button>
+
+                        <!-- Row 2 -->
+                        <button class="btn btn-number" onclick="appendNumber('7')">7</button>
+                        <button class="btn btn-number" onclick="appendNumber('8')">8</button>
+                        <button class="btn btn-number" onclick="appendNumber('9')">9</button>
+                        <button class="btn btn-operator" onclick="appendOperator('multiply')">×</button>
+
+                        <!-- Row 3 -->
+                        <button class="btn btn-number" onclick="appendNumber('4')">4</button>
+                        <button class="btn btn-number" onclick="appendNumber('5')">5</button>
+                        <button class="btn btn-number" onclick="appendNumber('6')">6</button>
+                        <button class="btn btn-operator" onclick="appendOperator('subtract')">−</button>
+
+                        <!-- Row 4 -->
+                        <button class="btn btn-number" onclick="appendNumber('1')">1</button>
+                        <button class="btn btn-number" onclick="appendNumber('2')">2</button>
+                        <button class="btn btn-number" onclick="appendNumber('3')">3</button>
+                        <button class="btn btn-operator" onclick="appendOperator('add')">+</button>
+
+                        <!-- Row 5 -->
+                        <button class="btn btn-number" onclick="appendNumber('0')">0</button>
+                        <button class="btn btn-number" onclick="appendNumber('.')">.</button>
+                        <button class="btn btn-function" onclick="appendOperator('modulo')">mod</button>
+                        <button class="btn btn-equals" onclick="calculate()">=</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- History Section -->
+            <div class="history-section">
+                <div class="history-card">
+                    <div class="history-header">
+                        <h2>History</h2>
+                        <button class="btn-clear-history" onclick="clearHistory()">Clear</button>
+                    </div>
+                    <div class="history-list" id="historyList">
+                        <div class="empty-state">No calculations yet</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Status Message -->
+        <div class="status-message" id="statusMessage"></div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
